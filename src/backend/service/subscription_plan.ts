@@ -1,4 +1,4 @@
-import { getById, getByStripePriceId } from "../models/subscription_plan";
+import { getById, getByCreemProductId } from "../models/subscription_plan";
 
 export async function getSubscriptionPlanById(id: number) {
   return await getById(id);

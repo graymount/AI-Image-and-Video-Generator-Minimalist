@@ -1,13 +1,45 @@
-import Stripe from "stripe";
-import { getUserByUuidAndEmail } from "@/backend/service/user";
+/**
+ * Checkout API Route
+ *
+ * Handles creation of checkout sessions using the Creem SDK.
+ * Requires authentication and integrates with Next.js Auth.js.
+ *
+ * @module api/checkout
+ */
 
-import { getSubscriptionPlan } from "@/backend/service/subscription_plan";
-import { UserSubscriptionStatusEnum } from "@/backend/type/enum/user_subscription_enum";
-import { PaymentStatus } from "@/backend/type/enum/payment_status_enum";
-import { PaymentHistory } from "@/backend/type/type";
-import { createPaymentHistory } from "@/backend/service/payment_history";
-import { getUserSubscriptionByUserIdAndStatus } from "@/backend/service/user_subscription";
-export const maxDuration = 60; // Changed from 120 to 60 to comply with Vercel's hobby plan limits
+import { NextRequest, NextResponse } from "next/server";
+import { Creem } from "creem";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
+
+/**
+ * Checkout Session Interface
+ * Represents the structure of a Creem checkout session response
+ */
+export interface CheckoutSession {
+  /** Unique identifier for the checkout session */
+  id: string;
+  /** Type of object (always "checkout_session") */
+  object: string;
+  /** ID of the product being purchased */
+  product: string;
+  /** Current status of the checkout session */
+  status: string;
+  /** URL where the customer completes the purchase */
+  checkout_url: string;
+  /** URL to redirect after successful payment */
+  success_url: string;
+  /** Payment mode (subscription or one-time) */
+  mode: string;
+}
+
+/**
+ * Initialize Creem SDK client
+ * Server index 1 is used for test environment
+ */
+const creem = new Creem({
+  serverIdx: 1,
+});
 
 export async function POST(req: Request) {
   try {
@@ -19,127 +51,122 @@ export async function POST(req: Request) {
     if (!plan_id || !amount || !interval) {
       return Response.json({ error: "invalid params" }, { status: 400 });
     }
-    // check user
-    const user = await getUserByUuidAndEmail(user_uuid, user_email);
-    if (!user || user.uuid !== user_uuid) {
-      return Response.json({ error: "user not found" }, { status: 401 });
-    }
-    // check subscription plan
-    const subscriptionPlan = await getSubscriptionPlan(plan_id);
 
-    if (
-      !subscriptionPlan ||
-      Math.round(amount) !== Math.round(subscriptionPlan.price * 100) ||
-      subscriptionPlan.is_active === false ||
-      subscriptionPlan.interval !== interval
-    ) {
-      return Response.json(
-        { error: "subscription plan not found" },
-        { status: 404 }
-      );
+    // Get authenticated session from Auth.js
+    const session = await auth.api.getSession({ headers: headers() });
+
+    // Verify authentication
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // check user subscription
-    if (plan_id !== 1 && plan_id !== 8 && plan_id !== 9) {
-      const userSubscriptions = await getUserSubscriptionByUserIdAndStatus(
-        user.uuid,
-        [
-          UserSubscriptionStatusEnum.ACTIVE,
-          UserSubscriptionStatusEnum.CANCELLED,
-        ]
-      );
-      if (userSubscriptions.length > 0) {
-        return Response.json(
-          { error: "You already has an active subscription" },
-          { status: 500 }
-        );
-      }
-    }
+    const apiKey = process.env.CREEM_API_KEY;
+    const successUrl = process.env.WEB_BASE_URI || process.env.SUCCESS_URL;
 
-    // Determine if this is a one-time payment or subscription
-    const isOneTimePayment = plan_id === 1 || plan_id === 9 || plan_id === 11;
-
-    const stripe = new Stripe(process.env.STRIPE_PRIVATE_KEY || "");
-    const price = await stripe.prices.retrieve(
-      subscriptionPlan.stripe_price_id
-    );
-
-    // Only check recurring requirement for subscription plans
-    if (!isOneTimePayment && !price.recurring) {
-      return Response.json(
-        { error: "price must be recurring type" },
-        { status: 400 }
-      );
-    }
-
-    const createPaymentHistoryRequest: PaymentHistory = {
-      id: 0,
-      user_id: user.uuid,
-      subscription_plans_id: plan_id,
-      stripe_price_id: subscriptionPlan.stripe_price_id,
-      stripe_subscription_id: "",
-      stripe_customer_id: "",
-      stripe_payment_intent_id: "",
-      amount: amount,
-      currency: "USD",
-      status: PaymentStatus.STARTED,
-      created_at: new Date(),
-    };
-
-    const paymentHistory = await createPaymentHistory(
-      createPaymentHistoryRequest
-    );
-    if (!paymentHistory || paymentHistory.id === 0) {
-      return Response.json(
-        { error: "create payment history failed" },
-        { status: 500 }
-      );
-    }
-
-    let options: Stripe.Checkout.SessionCreateParams = {
-      client_reference_id: String(user.id),
-      customer_email: user.email,
-      line_items: [
-        {
-          price: subscriptionPlan.stripe_price_id,
-          quantity: 1,
+    // Create checkout session using Creem SDK
+    // This initiates the payment process and returns a checkout URL
+    const checkoutSessionResponse = await creem.createCheckout({
+      xApiKey: apiKey!,
+      createCheckoutRequest: {
+        productId: plan_id as string,
+        successUrl: successUrl as string,
+        // Link checkout to user for tracking and fulfillment
+        requestId: session?.user.id as string,
+        // Additional metadata for order processing and customer info
+        metadata: {
+          email: session?.user.email as string,
+          name: session?.user.name as string,
+          userId: session?.user.id as string,
+          interval: interval,
+          amount: amount,
+          subscriptionPlanId: String(plan_id),
         },
-      ],
-      mode: isOneTimePayment ? "payment" : "subscription",
-      payment_method_types: ["card"],
-      metadata: {
-        project: "ai-video-generator",
-        interval: interval,
-        userId: String(user.uuid),
-        priceId: subscriptionPlan.stripe_price_id,
-        quantity: 1,
-        paymentHistoryId: String(paymentHistory.id),
-        credit: subscriptionPlan.credit_per_interval,
-        subscriptionPlanId: String(plan_id),
       },
-      // Only include subscription_data if it's not a one-time payment
-      ...(isOneTimePayment
-        ? {}
-        : {
-            subscription_data: {
-              metadata: {
-                project: "ai-video-generator",
-                userId: String(user.uuid),
-                quantity: 1,
-                priceId: subscriptionPlan.stripe_price_id,
-                paymentHistoryId: String(paymentHistory.id),
-                credit: subscriptionPlan.credit_per_interval,
-                subscriptionPlanId: String(plan_id),
-                interval: interval,
-              },
-            },
-          }),
-      success_url: `${process.env.WEB_BASE_URI}`,
-      cancel_url: `${process.env.WEB_BASE_URI}/pricing`,
-    };
-    const session = await stripe.checkout.sessions.create(options);
-    return Response.json({ session });
-  } catch (e) {
-    console.log("checkout failed: ", e);
+    });
+
+    // Return checkout URL for client-side redirect
+    return NextResponse.json({
+      success: true,
+      checkoutUrl: checkoutSessionResponse.checkoutUrl,
+      session: { url: checkoutSessionResponse.checkoutUrl }
+    });
+  } catch (error) {
+    console.error("Error creating checkout session:", error);
+    return NextResponse.json(
+      { error: "Failed to create checkout session" },
+      { status: 500 },
+    );
+  }
+}
+
+/**
+ * GET /api/checkout
+ *
+ * Creates a new checkout session for a specific product.
+ * Requires authentication and product ID as query parameter.
+ *
+ * @async
+ * @function
+ * @param {NextRequest} req - Next.js request object containing:
+ *   - product_id: Query parameter for the product to purchase
+ *
+ * @returns {Promise<NextResponse>} JSON response containing:
+ * - On success: { success: true, checkoutUrl: string }
+ * - On error: { error: string } with appropriate status code
+ *
+ * @example
+ * // Request
+ * GET /api/checkout?product_id=prod_123
+ *
+ * // Success Response
+ * {
+ *   "success": true,
+ *   "checkoutUrl": "https://checkout.creem.io/cs_123..."
+ * }
+ */
+export async function GET(req: NextRequest) {
+  // Get authenticated session from Auth.js
+  const session = await auth.api.getSession({ headers: headers() });
+  const productId = req.nextUrl.searchParams.get("product_id");
+
+  // Verify authentication and product ID
+  if (!session?.user?.id || !productId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const apiKey = process.env.CREEM_API_KEY;
+  const successUrl = process.env.SUCCESS_URL;
+
+  try {
+    // Create checkout session using Creem SDK
+    // This initiates the payment process and returns a checkout URL
+    const checkoutSessionResponse = await creem.createCheckout({
+      xApiKey: apiKey!,
+      createCheckoutRequest: {
+        productId: productId as string,
+        successUrl: successUrl as string,
+        // Link checkout to user for tracking and fulfillment
+        requestId: session?.user.id as string,
+        // Additional metadata for order processing and customer info
+        metadata: {
+          email: session?.user.email as string,
+          name: session?.user.name as string,
+          userId: session?.user.id as string,
+          myCustomField: "myCustomValue",
+        },
+      },
+    });
+
+    // Return checkout URL for client-side redirect
+    return NextResponse.json({
+      success: true,
+      checkoutUrl: checkoutSessionResponse.checkoutUrl,
+    });
+  } catch (error) {
+    console.error("Error creating checkout session:", error);
+    return NextResponse.json(
+      { error: "Failed to create checkout session" },
+      { status: 500 },
+    );
   }
 }

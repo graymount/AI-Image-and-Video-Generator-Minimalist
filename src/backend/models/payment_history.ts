@@ -3,14 +3,14 @@ import { PaymentHistory } from "../type/type";
 
 export async function create(paymentHistory: PaymentHistory) {
   const db = await getDb();
-  const res = await db.query(`INSERT INTO payment_history (user_id, subscription_plans_id, stripe_payment_intent_id, stripe_price_id, stripe_subscription_id, stripe_customer_id, amount, currency, status, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`, [paymentHistory.user_id, paymentHistory.subscription_plans_id, paymentHistory.stripe_payment_intent_id, paymentHistory.stripe_price_id, paymentHistory.stripe_subscription_id, paymentHistory.stripe_customer_id, paymentHistory.amount, paymentHistory.currency, paymentHistory.status, paymentHistory.created_at]);
+  const res = await db.query(`INSERT INTO payment_history (user_id, subscription_plans_id, creem_payment_intent_id, creem_product_id, creem_subscription_id, creem_customer_id, amount, currency, status, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`, [paymentHistory.user_id, paymentHistory.subscription_plans_id, paymentHistory.creem_payment_intent_id, paymentHistory.creem_product_id, paymentHistory.creem_subscription_id, paymentHistory.creem_customer_id, paymentHistory.amount, paymentHistory.currency, paymentHistory.status, paymentHistory.created_at]);
   return res.rows[0];
 }
 
 
 export async function update(paymentHistory: PaymentHistory) {
   const db = await getDb();
-  const res = await db.query(`UPDATE payment_history SET stripe_subscription_id = $1, stripe_customer_id = $2, status = $3 WHERE id = $4`, [paymentHistory.stripe_subscription_id, paymentHistory.stripe_customer_id, paymentHistory.status, paymentHistory.id]);
+  const res = await db.query(`UPDATE payment_history SET creem_subscription_id = $1, creem_customer_id = $2, status = $3 WHERE id = $4`, [paymentHistory.creem_subscription_id, paymentHistory.creem_customer_id, paymentHistory.status, paymentHistory.id]);
   return res.rows[0];
 }
 

@@ -57,7 +57,7 @@ export interface SubscriptionPlan {
   price: number; // 价格
   currency: string; // 货币单位
   credit_per_interval: number; // 每周期可用次数（这里是100次）
-  stripe_price_id: string; // Stripe价格ID
+  creem_product_id: string; // Creem产品ID
   is_active: boolean; // 是否激活
   created_at: Date;
   updated_at: Date;
@@ -67,9 +67,9 @@ export interface SubscriptionPlan {
 export interface UserSubscription {
   id?: number;
   user_id: string; // 关联到你的用户表
-  stripe_price_id: string;
-  stripe_subscription_id: string; // Stripe订阅ID
-  stripe_customer_id: string; // Stripe客户ID
+  creem_product_id: string;
+  creem_subscription_id: string; // Stripe订阅ID
+  creem_customer_id: string; // Stripe客户ID
   status: string; // 订阅状态：'active', 'canceled', 'past_due'等
   subscription_plans_id: number; // REFERENCES subscription_plans(id)
   current_period_start: Date; // 当前订阅周期开始时间
@@ -100,11 +100,11 @@ export interface CreditUsage {
 export interface PaymentHistory {
   id?: number;
   user_id: string; // 关联到用户表
-  stripe_price_id: string;
-  stripe_subscription_id: string; // Stripe订阅ID
-  stripe_customer_id: string; // Stripe客户ID
+  creem_product_id: string;
+  creem_subscription_id: string; // Creem订阅ID
+  creem_customer_id: string; // Creem客户ID
   subscription_plans_id: number; // REFERENCES subscription_plans(id)
-  stripe_payment_intent_id: string; // Stripe支付意向ID
+  creem_payment_intent_id: string; // Creem支付意向ID
   amount: number; // 支付金额
   currency: string; // 货币单位
   status: string; // 支付状态
@@ -122,7 +122,7 @@ export interface CancelHistory {
   type: string; // 取消类型：immediate（立即）, end_of_period（周期结束）
   amount: number; // 退款金额（如果有）
   status: string; // 退款状态
-  stripe_refund_id: string; // Stripe退款ID
+  creem_refund_id: string; // Creem退款ID
   feedback: string; // 用户反馈
   created_by: string; // 由谁执行的取消操作（用户/管理员）
   created_at: Date;

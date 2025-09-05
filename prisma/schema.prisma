@@ -1,0 +1,181 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String            @id @default(uuid())
+  email           String            @unique
+  name            String?
+  emailVerified   Boolean           @default(false)
+  image           String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  sessions        Session[]
+  accounts        Account[]
+  Subscription    Subscription[]
+  OneTimePurchase OneTimePurchase[]
+
+  @@map("user")
+}
+
+model Subscription {
+  id                 String   @id
+  userId             String
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product            String
+  providerCustomerId String
+  status             String
+  created_at         DateTime @default(now())
+  updated_at         DateTime @updatedAt
+
+  @@map("subscription")
+}
+
+model OneTimePurchase {
+  id                 String   @id
+  userId             String
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product            String
+  providerCustomerId String
+  created_at         DateTime @default(now())
+  updated_at         DateTime @updatedAt
+
+  @@map("onetimepurchase")
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([token])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@map("account")
+}
+
+model Verification {
+  id         String    @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime? @default(now())
+  updatedAt  DateTime? @updatedAt
+
+  @@map("verification")
+}
+
+// Existing models from the original project
+model SubscriptionPlan {
+  id                      Int      @id @default(autoincrement())
+  name                    String
+  description             String?
+  price                   Decimal  @db.Decimal(10, 2)
+  interval                String
+  credit_per_interval     Int
+  is_active               Boolean  @default(true)
+  stripe_price_id         String?  @unique
+  creem_product_id        String?  @unique
+  created_at              DateTime @default(now())
+  updated_at              DateTime @updatedAt
+
+  @@map("subscription_plan")
+}
+
+model UserSubscription {
+  id                     Int      @id @default(autoincrement())
+  user_uuid              String
+  subscription_plan_id   Int
+  status                 String
+  current_period_start   DateTime
+  current_period_end     DateTime
+  stripe_subscription_id String?  @unique
+  stripe_customer_id     String?
+  creem_subscription_id  String?  @unique
+  creem_customer_id      String?
+  created_at             DateTime @default(now())
+  updated_at             DateTime @updatedAt
+
+  @@map("user_subscription")
+}
+
+model PaymentHistory {
+  id                   Int      @id @default(autoincrement())
+  user_uuid            String
+  subscription_plan_id Int
+  amount               Decimal  @db.Decimal(10, 2)
+  interval             String
+  payment_status       String
+  payment_intent_id    String?  @unique
+  created_at           DateTime @default(now())
+  updated_at           DateTime @updatedAt
+
+  @@map("payment_history")
+}
+
+model CreditUsage {
+  id           Int      @id @default(autoincrement())
+  user_uuid    String   @unique
+  credit_used  Int      @default(0)
+  credit_total Int      @default(0)
+  period_start DateTime
+  period_end   DateTime
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  @@map("credit_usage")
+}
+
+model EffectResult {
+  id                Int      @id @default(autoincrement())
+  user_uuid         String
+  effect_id         Int
+  input_image_url   String?
+  output_video_url  String?
+  output_image_url  String?
+  status            String
+  replicate_id      String?  @unique
+  created_at        DateTime @default(now())
+  updated_at        DateTime @updatedAt
+
+  @@map("effect_result")
+}
+
+model Effect {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?
+  is_active   Boolean  @default(true)
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  @@map("effect")
+}

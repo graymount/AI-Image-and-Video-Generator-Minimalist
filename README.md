@@ -12,8 +12,8 @@
 - **用户仪表板**：个人工作空间，用于管理生成的内容
 
 ### 技术特性
-- **身份验证**：通过 NextAuth.js 实现安全的 Google OAuth 集成
-- **支付集成**：Stripe 集成用于订阅管理
+- **身份验证**：通过 Better Auth 实现安全的 OAuth 集成
+- **支付集成**：Creem 集成用于订阅管理
 - **云存储**：AWS S3/Cloudflare R2 用于媒体存储
 - **数据库**：PostgreSQL 用于数据持久化
 - **响应式设计**：使用 Tailwind CSS 的移动优先设计
@@ -32,10 +32,10 @@
 ### 后端
 - **API**：Next.js API Routes
 - **数据库**：PostgreSQL with pg 驱动
-- **身份验证**：NextAuth.js 4
+- **身份验证**：Better Auth
 - **AI 集成**：Replicate API
 - **文件存储**：AWS S3 / Cloudflare R2
-- **支付**：Stripe
+- **支付**：Creem
 
 ### 开发工具
 - **包管理器**：npm
@@ -47,7 +47,7 @@
 ### 前置要求
 - Node.js 18+ 
 - PostgreSQL 数据库
-- Stripe 账户（用于支付）
+- Creem 账户（用于支付）
 - Google OAuth 凭证
 - Replicate API 密钥
 - AWS S3 或 Cloudflare R2 凭证

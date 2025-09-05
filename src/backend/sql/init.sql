@@ -75,13 +75,13 @@ CREATE TABLE effect_result (
 CREATE TABLE payment_history (
   id SERIAL PRIMARY KEY,                    -- 支付记录唯一标识符（自增主键）
   user_id text NOT NULL,                    -- 用户ID（关联users表）
-  stripe_payment_intent_id character varying(100) NULL, -- Stripe支付意图ID
+  creem_payment_intent_id character varying(100) NULL, -- Creem支付意图ID
   amount numeric(10,2) NOT NULL,            -- 支付金额（精确到分）
   currency character varying(3) NOT NULL,   -- 货币代码（如：USD, EUR等）
   status character varying(50) NOT NULL,    -- 支付状态（如：succeeded, failed, pending等）
-  stripe_subscription_id text NULL,         -- Stripe订阅ID（用于订阅支付）
-  stripe_customer_id text NULL,             -- Stripe客户ID
-  stripe_price_id text NULL,                -- Stripe价格ID
+  creem_subscription_id text NULL,         -- Creem订阅ID（用于订阅支付）
+  creem_customer_id text NULL,             -- Creem客户ID
+  creem_product_id text NULL,                -- Creem产品ID
   subscription_plans_id bigint NULL,        -- 订阅计划ID（关联subscription_plans表）
   created_at timestamp with time zone NULL  -- 支付创建时间
 );
@@ -94,7 +94,7 @@ CREATE TABLE subscription_plans (
   price numeric(10,2) NOT NULL,             -- 计划价格（精确到分）
   currency character varying(3) NOT NULL,   -- 货币代码（如：USD, EUR等）
   credit_per_interval integer NOT NULL,     -- 每个计费周期提供的积分数
-  stripe_price_id character varying(100) NOT NULL, -- Stripe价格ID
+  creem_product_id character varying(100) NOT NULL, -- Creem产品ID
   is_active boolean NULL,                   -- 计划是否活跃（可用于订阅）
   created_at timestamp with time zone NULL, -- 创建时间
   updated_at timestamp with time zone NULL  -- 最后更新时间
@@ -104,9 +104,9 @@ CREATE TABLE subscription_plans (
 CREATE TABLE user_subscriptions (
   id SERIAL PRIMARY KEY,                    -- 订阅记录唯一标识符（自增主键）
   user_id text NOT NULL,                    -- 用户ID（关联users表）
-  stripe_price_id text NOT NULL,            -- Stripe价格ID
-  stripe_subscription_id character varying(100) NOT NULL, -- Stripe订阅ID
-  stripe_customer_id character varying(100) NOT NULL,     -- Stripe客户ID
+  creem_product_id text NOT NULL,            -- Creem产品ID
+  creem_subscription_id character varying(100) NOT NULL, -- Creem订阅ID
+  creem_customer_id character varying(100) NOT NULL,     -- Creem客户ID
   subscription_plans_id bigint NULL,        -- 订阅计划ID（关联subscription_plans表）
   status character varying(50) NOT NULL,    -- 订阅状态（如：active, canceled, past_due等）
   current_period_start timestamp with time zone NOT NULL, -- 当前计费周期开始时间
