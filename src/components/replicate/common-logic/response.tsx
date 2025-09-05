@@ -1,7 +1,7 @@
 "use client";
 
 import { toast } from "sonner";
-import { signIn } from "next-auth/react";
+import { signIn } from "@/providers/auth";
 
 interface ErrorHandlingParams {
   response: Response;
@@ -19,7 +19,10 @@ export const handleApiErrors = async ({
   if (response.status === 401) {
     toast.error("Please login first.");
     await sleep(1000);
-    await signIn("google");
+    await signIn.social({
+      provider: "google",
+      callbackURL: "/dashboard",
+    });
     return false;
   }
 

@@ -9,7 +9,7 @@ import {
   User,
   Button,
 } from "@nextui-org/react";
-import { signOut, useSession } from "next-auth/react";
+import { signOut, useSession } from "@/providers/auth";
 import { useEffect } from "react";
 import { Icon } from "@iconify/react";
 import { useAppContext } from "@/contexts/app";
@@ -20,11 +20,17 @@ export default function UserButton() {
   const { data: session } = useSession();
   const { user, setUser } = useAppContext();
   const t = useTranslations("Nav");
+  
   useEffect(() => {
     if (session && session.user) {
-      setUser(session.user);
+      setUser({
+        uuid: session.user.id,
+        email: session.user.email,
+        nickname: session.user.name,
+        avatar_url: session.user.image,
+      });
     }
-  }, [session, setUser, user]);
+  }, [session, setUser]);
 
   return (
     <Dropdown placement="bottom-end">
@@ -94,7 +100,9 @@ export default function UserButton() {
         <DropdownItem
           key="logout"
           color="danger"
-          onClick={() => signOut()}
+          onClick={() => signOut({
+            callbackURL: "/",
+          })}
           startContent={<Icon icon="lucide:log-out" width="16" height="16" />}
         >
           {t("logOut")}

@@ -20,7 +20,7 @@ import LoginButton from "@/components/button/login-button";
 import UserButton from "../../button/user-button";
 import { useAppContext } from "@/contexts/app";
 import { useEffect, useState } from "react";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/providers/auth";
 import { usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Icon } from "@iconify/react/dist/iconify.js";

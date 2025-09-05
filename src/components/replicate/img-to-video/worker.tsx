@@ -10,7 +10,7 @@ import { UserSubscriptionInfo } from "@/backend/type/domain/user_subscription_in
 import DeleteButton from "@/components/button/delete-button";
 import { handleApiErrors } from "@/components/replicate/common-logic/response";
 import { useRouter } from "next/navigation";
-import { signIn } from "next-auth/react";
+import { signIn } from "@/providers/auth";
 import CreditInfo from "@/components/landingpage/credit-info";
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -87,7 +87,10 @@ export default function Worker(props: {
     if (user === undefined || user === null) {
       toast.warning("Please login first");
       await sleep(1000);
-      signIn("google");
+      signIn.social({
+        provider: "google",
+        callbackURL: "/dashboard",
+      });
       return;
     }
 
