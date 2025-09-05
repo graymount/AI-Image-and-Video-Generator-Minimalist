@@ -38,3 +38,5 @@ next-env.d.ts
 
 # editor specific
 .claude/
+creem-template/
+.env.production
